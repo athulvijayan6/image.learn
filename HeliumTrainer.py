@@ -1,55 +1,52 @@
 # @Author: athul
 # @Date:   2017-06-14T07:24:24+05:30
 # @Last modified by:   athul
-# @Last modified time: 2017-07-17T20:10:01+05:30
-
-
-
+# @Last modified time: 2017-08-16T21:40:31+05:30
+import abc
 import copy
 from datetime import datetime
 import os.path
 import re, sys, os
 import time
 import matplotlib.pyplot as plt
-plt.style.use('ggplot')
-
 import numpy as np
 import tensorflow as tf
+plt.style.use('ggplot')
 metrics = tf.metrics
 
+
 class Helium(object):
-    '''
+    __metaclass__ == abc.ABCMeta
+    """
     This example implements a stable training and evaluating framework for Deep Learning.
-    It is not an API, Instead a working example of an efficient implementation of
-    model desciption,training and evaluation.
+    This is a production friendly implementation for reuse and deployment.
 
     This is implemented to train a net with multiple GPU towers and CPU coordinating the training process.
 
-    Common practice is to use single machine with multiple GPUs for training a model; hyperparameter
-    selection can be done using different machines parallely. Can we do better?
-
-    The ai.universe base library implements following features.
+    The ai.universe base library for images (Helium) implements following features.
         1.  --> Done. Checkpoint training - ability to save and restore from check points.
         2.  --> Done. Creates a Moving Average of trainable variables.
         3.  --> Done. Summary is saved every 100 steps.
         4.  --> Done. Checkpoint is saved at every 1000 steps.
         5.  --> Done. Optional parameter in train to restore the model from checkpoint.
-        6.  --> Done. Minibatch loader.abstracted
-        7.  --> (Optional) Superviser based. For stable training at AWS.
-        8.  --> Evaluate metrics on evaluation data.
+        6.  --> Done. Mini batch loader.abstracted
+        7.  --> TODO(Optional) Superviser based. For stable training in AWS.
+        8.  --> TODO Evaluation metrics.
         9.  --> Done. Distributes training batch across GPUs.
         10. --> Done. Exponential learning rate decay as per --
-        11. --> Variable initializer according to --
-        12. --> Minibatch normalization.
-        13. --> Visualize function- creates plots and visualizations.
-        14. --> ai.universe API.
+        11. --> TODO Alternative optimizers
+        11. --> TODO Variable initializer according to --
+        12. --> TODO Mini batch normalization.
+        13. --> TODO Visualize function- creates plots and visualizations.
+        14. --> TODO ai.universe API.
 
-    The idea is to reuse the implementaion for other models just by changing the model definition.
-    '''
+    The idea is to reuse the implementation for other models just by changing the model definition.
+    """
+
     def __init__(self,
-                 graph= tf.Graph(),
-                 session= None,
-                 train_dir= '/tmp/simple_cnn/train'):
+                 graph=tf.Graph(),
+                 session=None,
+                 train_dir='/tmp/helium/train'):
         self.train_dir = train_dir
         self.graph = graph
         self.session = session
@@ -58,17 +55,60 @@ class Helium(object):
         self.TOWER_NAME = 'universetower'
 
         # Constants dictating the learning rate schedule.
-        self.RMSPROP_DECAY = 0.9                # Decay term for RMSProp.
-        self.RMSPROP_MOMENTUM = 0.0             # Momentum in RMSProp.
-        self.RMSPROP_EPSILON = 1e-10              # Epsilon term for RMSProp.
+        self.ADAM_BETA1 = 0.9
+        self.ADAM_BETA2 = 0.999
+        self.ADAM_EPSILON = 1e-08
+        self.INITIAL_LEARNING_RATE = 1e-3
 
         self.MOVING_AVERAGE_DECAY = 0.9999
-        self.INITIAL_LEARNING_RATE = 1e-3
         self.NUM_EPOCHS_PER_DECAY = 350.0
-        self.LEARNING_RATE_DECAY_FACTOR = 0.1
-
         if not os.path.exists(self.train_dir):
             os.makedirs(self.train_dir)
+
+        self.neutron = None
+
+    @abc.abstractmethod
+    def load_batch(self, batch_size, is_training, num_threads):
+        """
+        abstract method for loading a batch of data
+        :param batch_size:
+        :param is_training:
+        :param num_threads:
+        :return:
+        """
+        return
+
+    @abc.abstractmethod
+    def model(self, input_data, num_classes, is_training):
+        """
+        abstract method for model definition
+        :param input_data:
+        :param num_classes:
+        :param is_training:
+        :return:
+        """
+        return
+
+    @abc.abstractmethod
+    def losses(self, targets, logits):
+        """
+        abstract method for defining loss function
+        :param targets:
+        :param logits:
+        :return:
+        """
+        return
+
+    @abc.abstractmethod
+    def evaluate(self, checkpoint_dir, batch_size, checkpoint_name=None, ):
+        """
+        abstract method for evaluating model
+        :param checkpoint_dir:
+        :param checkpoint_name:
+        :param batch_size:
+        :return:
+        """
+        return
 
     # multi gpu training
     def train(self, max_steps= 10000, batch_size= 32, restore_path= None):
@@ -77,48 +117,40 @@ class Helium(object):
         # Use cpu0 as the coordinator device.
         # CPU will act as a master and distribute training tasks to the slave GPUs
         with self.graph.as_default(), tf.device('/cpu:0'):
-            # Each batch is split int num_gpus and create minibatches.
-            # Each GPU is given these minibatches to compute gradient
+            # Each batch is split int num_gpus and create mini batches.
+            # Each GPU is given these mini batches to compute gradient
             # The gradients from each GPU is collected by master CPU to update the weights
-            # GPUs get synchronized at end of each batch. (or a set of minibatches)
+            # GPUs get synchronized at end of each batch. (or a set of mini batches)
             # Number of steps to train call = num_batch_processed * num_gpus
             global_step = tf.get_variable('global_step', [],
-                                          initializer= tf.constant_initializer(0),
-                                          trainable= False)
+                                          initializer=tf.constant_initializer(0),
+                                          trainable=False)
 
-            #  Learning rate exponential decay
-            num_batches_per_epoch = self.neutron.num_samples_to_train / batch_size
-            decay_step = int(num_batches_per_epoch * self.NUM_EPOCHS_PER_DECAY)
-            learning_rate = tf.train.exponential_decay( self.INITIAL_LEARNING_RATE,
-                                                        global_step,
-                                                        decay_step,
-                                                        self.LEARNING_RATE_DECAY_FACTOR,
-                                                        staircase= True)
             # Define optimizer
-            optimizer = tf.train.RMSPropOptimizer(learning_rate,
-                                                  decay= self.RMSPROP_DECAY,
-                                                  momentum= self.RMSPROP_MOMENTUM,
-                                                  epsilon= self.RMSPROP_EPSILON)
+            optimizer = tf.train.AdamOptimizer(learning_rate=self.INITIAL_LEARNING_RATE,
+                                               beta1=self.ADAM_BETA1,
+                                               beta2=self.ADAM_BETA2,
+                                               epsilon=self.ADAM_EPSILON)
             # Distribute training across multiple gpus
             # give a batch of data to each GPU for computing gradients; cpu collects the gradient and makes updates
             tower_grads = []
             with tf.variable_scope(tf.get_variable_scope()):
                 for i in range(self.num_gpus):
-                    with tf.device('/cpu:%d' % i):
+                    with tf.device('/gpu:%d' % i):
                         with tf.name_scope("%s_%d" % (self.TOWER_NAME, i)) as scope:
                             # Get a batch of data in dimension [batch_size, d0, d1,...,dn]
-                            images, labels = self.load_batch(batch_size= batch_size, is_training= True )
+                            images, labels = self.load_batch(batch_size=i.fr5batch_size, is_training= True )
                             # get the logits from the model definition
                             logits = self.model(images,
-                                                num_classes= self.neutron.num_classes,
-                                                is_training= True)
+                                                num_classes=self.neutron.num_classes,
+                                                is_training=True)
 
-                            predictions = tf.argmax(input= logits, axis= 1)
+                            predictions = tf.argmax(input=logits, axis=1)
                             predictions = tf.cast(predictions, labels.dtype)
                             accuracy, accuracy_op = metrics.accuracy(labels, predictions)
                             # Specify the loss function
                             onehot_labels = tf.one_hot(labels, self.neutron.num_classes)
-                            cross_entropy = tf.losses.softmax_cross_entropy(onehot_labels, logits)
+                            cross_entropy = self.losses(onehot_labels, logits)
                             tf.add_to_collection('losses', cross_entropy)
 
                             # Collect the losses
@@ -208,8 +240,6 @@ class Helium(object):
                         saver.save(self.session, checkpoint_path, global_step= global_step)
             except tf.errors.OutOfRangeError:
                 print('Done training - epoch limit reached.')
-            except Exception as e:
-                print(e)
             finally:
                 coord.request_stop()
             coord.join(threads)

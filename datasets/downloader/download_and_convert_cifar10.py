@@ -1,3 +1,5 @@
+import pathlib
+
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
@@ -30,6 +32,7 @@ def run(data_dir):
                                     "cifar-10-batches-py",
                                     "test_batch")]
     output_dir = os.path.join(data_dir, "cifar10_tfrecords")
+    pathlib.Path(data_directory).mkdir(parents=True, exist_ok=True)
     image_width = 32
     image_height = 32
     image_depth = 3
@@ -63,4 +66,5 @@ def run(data_dir):
 
 if __name__ == "__main__":
     data_directory = os.path.join('/', 'data', 'datasets', 'cifar10')
+    pathlib.Path(data_directory).mkdir(parents=True, exist_ok=True)
     run(data_directory)

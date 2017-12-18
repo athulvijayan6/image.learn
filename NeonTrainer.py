@@ -16,14 +16,14 @@ plt.style.use('ggplot')
 metrics = tf.metrics
 
 
-class HeliumTrainer(object):
+class NeonTrainer(object):
     """
     This example implements a stable training and evaluating framework for Deep Learning.
     This is a production friendly implementation for reuse and deployment.
 
     This is implemented to train a net with multiple GPU towers and CPU coordinating the training process.
 
-    The ai.universe base library for images (Helium) implements following features.
+    The ai.universe base library for images (Neon) implements following features.
         1.  --> Done. Checkpoint training - ability to save and restore from check points.
         3.  --> Done. Summary is saved every 100 steps.
         4.  --> Done. Checkpoint is saved at every 1000 steps.
@@ -31,7 +31,9 @@ class HeliumTrainer(object):
         6.  --> Done. Mini batch loader.abstracted
         7.  --> TODO(Optional) Superviser based. For stable training in AWS.
         8.  --> TODO Evaluation metrics.
-        11. --> Done Alternative optimizers
+        9.  --> Done. Distributes training batch across GPUs.
+        10. --> Done. Exponential learning rate decay as per --
+        11. --> TODO Alternative optimizers
         11. --> TODO Variable initializer according to --
         12. --> TODO Mini batch normalization.
         13. --> TODO Visualize function- creates plots and visualizations.
@@ -42,9 +44,10 @@ class HeliumTrainer(object):
 
     def __init__(self,
                  session=None,
-                 train_dir='/tmp/helium/train'):
+                 train_dir='/tmp/Neon/train'):
         self.train_dir = train_dir
         self.session = session
+        self.num_gpu = 1
 
         self.TOWER_NAME = 'universetower'
         if not os.path.exists(self.train_dir):
@@ -122,19 +125,49 @@ class HeliumTrainer(object):
                                           trainable=False)
 
             optimizer = self.optimizer()
-            # Get a batch of data in dimension [batch_size, d0, d1,...,dn]
-            images, labels = self.load_batch(batch_size=batch_size, is_training=True)
-            # get the logits from the model definition
-            logits = self.model(images, is_training=True)
+            # Distribute training across multiple gpu
+            tower_grads = []
+            tower_losses = []
+            reuse_variable = self.num_gpu > 1
+            for i in range(self.num_gpu):
+                with tf.device('/cpu:%d' % i):
+                    with tf.variable_scope("%s_%d" % (self.TOWER_NAME, i),
+                                           reuse=reuse_variable) as scope:
+                        # Get a batch of data in dimension [batch_size, d0, d1,...,dn]
+                        images, labels = self.load_batch(batch_size=batch_size, is_training=True)
+                        # get the logits from the model definition
+                        logits = self.model(images, is_training=True)
 
-            # Specify the loss function
-            one_hot_labels = tf.one_hot(labels, self.data_set.num_classes)
-            cross_entropy = self.losses(one_hot_labels, logits)
+                        # Specify the loss function
+                        one_hot_labels = tf.one_hot(labels, self.data_set.num_classes)
+                        cross_entropy = self.losses(one_hot_labels, logits)
+                        tf.add_to_collection('losses', cross_entropy)
+
+                        # Collect the losses
+                        losses = tf.get_collection('losses', scope.name)
+                        total_loss = tf.add_n(losses, name='total_loss')
+                        tower_losses.append(total_loss)
+
+                        grads = optimizer.compute_gradients(total_loss)
+                        tower_grads.append(grads)
+            tower_loss = tf.reduce_mean(tf.stack(tower_losses))
+            # Synchronization point
+            average_grads = []
+            for grads_and_vars in zip(*tower_grads):
+                grads = []
+                for g, _ in grads_and_vars:
+                    expanded_g = tf.expand_dims(g, 0)
+                    grads.append(expanded_g)
+                grad = tf.concat(axis=0, values=grads)
+                grad = tf.reduce_mean(grad, axis=0)
+                v = grads_and_vars[0][1]
+                average_grads.append((grad, v))
+
             # Define optimization step
-            optimizer_step = optimizer.minimize(cross_entropy, global_step=global_step)
+            optimizer_step = optimizer.apply_gradients(average_grads, global_step=global_step)
 
             # add ops for summaries
-            tf.summary.scalar("cross_entropy", cross_entropy)
+            tf.summary.scalar("tower_loss", tower_loss)
             summary_writer = tf.summary.FileWriter(self.train_dir, self.session.graph)
             summary_op = tf.summary.merge_all()
             train_op = tf.group(optimizer_step)

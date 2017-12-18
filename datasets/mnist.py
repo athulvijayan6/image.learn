@@ -15,8 +15,9 @@ class MNIST(object):
     image_width = 28
     image_height = 28
     image_depth = 1
+    num_train_examples = 5000
 
-    def __init__(self, data_dir, session):
+    def __init__(self, session, data_dir):
         self.data_dir = data_dir
         self.session = session
         self.train_files = [os.path.join(self.data_dir,

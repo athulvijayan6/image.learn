@@ -10,9 +10,11 @@ import numpy as np
 import time
 import sys, os, json
 import matplotlib.pyplot as plt
+
+from cnn.LithiumModel import LithiumModel
+from datasets.mnist import MNIST
+
 plt.style.use('ggplot')
-from beryllium import Beryllium
-from image.neutrons.neutron_mnist import neutron_mnist
 
 AI_HOME = os.environ['AI_HOME']
 AI_DATA = os.environ['AI_DATA']
@@ -20,21 +22,20 @@ AI_DATA = os.environ['AI_DATA']
 sys.path.append(AI_HOME)
 sys.path.append(os.path.join(AI_HOME, 'image'))
 
-data_dir = os.path.join(AI_DATA, 'mnist')
+data_dir = os.path.join(AI_DATA, 'datasets', 'mnist')
 train_dir = os.path.join(AI_DATA, 'mnist', 'cnn_model')
 
+
 def test_input():
-    # create_dataset()
-    graph = tf.Graph()
-    neutron = neutron_mnist(data_dir, graph)
-    # neutron.download_and_convert()
-    with tf.Session(graph= graph) as session:
-        with graph.as_default():
+    with tf.Session() as session:
+        with session.graph.as_default():
+            data_set = MNIST(session, data_dir)
+            data_set.download_and_convert()
             # Start queues to fetch data
-            batch_size = 32
-            images, labels = neutron.load_batch(batch_size= batch_size, is_training= True)
+            batch_size = 64
+            images, labels = data_set.load_batch(batch_size=batch_size, is_training=True)
             coord = tf.train.Coordinator()
-            threads = tf.train.start_queue_runners(sess=session, coord= coord)
+            threads = tf.train.start_queue_runners(sess=session, coord=coord)
             images, labels = session.run([images, labels])
 
             i = 9
@@ -42,25 +43,20 @@ def test_input():
             print(labels[i])
             plt.imshow(img)
 
+
 def train():
-    # create_dataset()
-    graph = tf.Graph()
-    neutron = neutron_mnist(data_dir, graph)
-    # neutron.download_and_convert()
-    with tf.Session(graph= graph,
-                    config= tf.ConfigProto(allow_soft_placement= True, log_device_placement= False)) as session:
-        be = Beryllium(neutron, graph= graph, session= session, train_dir= train_dir)
-        be.train(batch_size= 64, max_steps = 1000)
+    batch_size = 64
+    num_epochs = 100
+    with tf.Session(config=tf.ConfigProto(allow_soft_placement=True,
+                                          log_device_placement=False)) as session:
+        data_set = MNIST(session, data_dir)
+        be = LithiumModel(data_set, session=session, num_epochs=num_epochs, train_dir=train_dir)
+        be.train(batch_size=batch_size)
         session.close()
 
+
 def evaluate():
-    # create_dataset()
-    graph = tf.Graph()
-    neutron = neutron_mnist(data_dir, graph)
-    with tf.Session(graph= graph) as session:
-        be = Beryllium(neutron, graph= graph, session= session, train_dir= train_dir)
-        be.evaluate(train_dir)
-        session.close()
+    pass
 
 if __name__ == '__main__':
     train()

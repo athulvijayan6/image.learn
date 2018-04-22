@@ -1,0 +1,9 @@
+[submodule "imagelearn/cnnvision"]
+	path = imagelearn/cnnvision
+	url = https://github.com/athulvijayan6/cnnvision.git
+[submodule "imagelearn/microsaccadevision"]
+	path = imagelearn/microsaccadevision
+	url = https://github.com/athulvijayan6/microsaccadevision.git
+[submodule "imagelearn/visiondatasets"]
+	path = imagelearn/visiondatasets
+	url = https://github.com/athulvijayan6/visiondatasets.git

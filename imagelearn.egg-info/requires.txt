@@ -1,4 +1,0 @@
-pip
-tensorflow
-numpy
-matplotlib

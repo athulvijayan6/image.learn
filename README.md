@@ -10,8 +10,6 @@
 ## Basic Overview
 
 A tidy repository of machine learning algorithms for machine vision.
-<p align="center"><img width=95% src="https://github.com/anfederico/Waldo/blob/master/media/Schematic.png"></p>
-
 <br>
 
 ## Install

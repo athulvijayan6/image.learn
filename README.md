@@ -1,9 +1,8 @@
-<p align="center"><img width=12.5% src="https://github.com/anfederico/Clairvoyant/blob/master/media/Logo.png"></p>
-<p align="center"><img width=60% src="https://github.com/anfederico/Clairvoyant/blob/master/media/Clairvoyant.png"></p>
+<p align="center"><img width=60% src="https://github.com/athulvijayan6/imagelearn/blob/master/logo.svg"></p>
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 ![Python](https://img.shields.io/badge/python-v2.7%20%2F%20v3.6-blue.svg)
-![Build Status](https://img.shields.io/travis/USER/REPO.svg)]
+![Build Status](https://img.shields.io/travis/USER/REPO.svg)
 ![Contributions welcome](https://img.shields.io/badge/contributions-welcome-orange.svg)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
@@ -19,8 +18,8 @@ A tidy repository of machine learning algorithms for machine vision.
 pip install <imagelearn-wheel-file.whl>
 ```
 
-## Description of algorithms
-lorem ipsum
+## Algorithms and models
+1. CNN - Convolutional neural networks are neural netowk architectures inspired from visual cortex of animal brain. The receptive field of neurons translates to convolution operation.
 
 ## How to use
 Here is an example of training a basic CNN with MNIST data. You can easily change the model and data set.
@@ -39,7 +38,10 @@ with tf.Session() as session:
     c.train()
 ```
 
-## Results summary
+## Summary of results
+TBD
+
+## Documentation
 TBD
 
 ## Contributing

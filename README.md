@@ -1,5 +1,6 @@
-<p align="center"><img width=60% src="https://github.com/athulvijayan6/imagelearn/blob/master/logo.svg"></p>
+<p align="center"><img width=60% src="https://github.com/athulvijayan6/imagelearn/blob/master/logo.png"></p>
 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 ![Python](https://img.shields.io/badge/python-v2.7%20%2F%20v3.6-blue.svg)
 ![Build Status](https://img.shields.io/travis/USER/REPO.svg)
